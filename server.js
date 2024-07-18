@@ -6,8 +6,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Supabase setup
-const supabaseUrl = 'https://your-supabase-url.supabase.co';
-const supabaseKey = 'your-supabase-key';
+const supabaseUrl = 'https://kgoxnhqzegmrpmmcuedr.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnb3huaHF6ZWdtcnBtbWN1ZWRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyMTMyNDkzMCwiZXhwIjoyMDM2OTAwOTMwfQ.ZzOygCfdj2bsoNSBZSjh_iMjMU8hL0LU6DVX-PPts4c';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(bodyParser.json());
