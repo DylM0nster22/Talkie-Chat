@@ -5,6 +5,7 @@ const mongoose = require('mongoose');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const session = require('express-session');
+const MongoStore = require('connect-mongo');
 const bcrypt = require('bcryptjs');
 
 const app = express();
@@ -12,7 +13,8 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // Connect to MongoDB
-mongoose.connect('mongodb+srv://tetherpro:L@serda1sy@cluster0.ijo3sgw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', { useNewUrlParser: true, useUnifiedTopology: true });
+const mongoUri = 'mongodb+srv://tetherpro:L@serda1sy@cluster0.ijo3sgw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+mongoose.connect(mongoUri, {});
 
 // User schema and model
 const UserSchema = new mongoose.Schema({
@@ -24,7 +26,12 @@ const User = mongoose.model('User', UserSchema);
 // Middleware
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: false }));
-app.use(session({ secret: 'secret', resave: false, saveUninitialized: false }));
+app.use(session({
+    secret: 'secret',
+    resave: false,
+    saveUninitialized: false,
+    store: MongoStore.create({ mongoUrl: mongoUri })
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
