@@ -1,66 +1,109 @@
 const express = require('express');
-const bodyParser = require('body-parser');
-const { createClient } = require('@supabase/supabase-js');
-const path = require('path');
+const http = require('http');
+const socketIo = require('socket.io');
+const mongoose = require('mongoose');
+const passport = require('passport');
+const LocalStrategy = require('passport-local').Strategy;
+const session = require('express-session');
+const bcrypt = require('bcryptjs');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const server = http.createServer(app);
+const io = socketIo(server);
 
-// Supabase setup
-const supabaseUrl = 'https://kgoxnhqzegmrpmmcuedr.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtnb3huaHF6ZWdtcnBtbWN1ZWRyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTcyMTMyNDkzMCwiZXhwIjoyMDM2OTAwOTMwfQ.ZzOygCfdj2bsoNSBZSjh_iMjMU8hL0LU6DVX-PPts4c';
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Connect to MongoDB
+mongoose.connect('mongodb+srv://tetherpro:L@serda1sy@cluster0.ijo3sgw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0', { useNewUrlParser: true, useUnifiedTopology: true });
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// User schema and model
+const UserSchema = new mongoose.Schema({
+    username: { type: String, unique: true },
+    password: String
+});
+const User = mongoose.model('User', UserSchema);
 
-// Serve the index.html file at the root URL
+// Middleware
+app.use(express.static('public'));
+app.use(express.urlencoded({ extended: false }));
+app.use(session({ secret: 'secret', resave: false, saveUninitialized: false }));
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Passport configuration
+passport.use(new LocalStrategy((username, password, done) => {
+    User.findOne({ username: username }, (err, user) => {
+        if (err) return done(err);
+        if (!user) return done(null, false, { message: 'Incorrect username.' });
+        bcrypt.compare(password, user.password, (err, res) => {
+            if (res) {
+                return done(null, user);
+            } else {
+                return done(null, false, { message: 'Incorrect password.' });
+            }
+        });
+    });
+}));
+
+passport.serializeUser((user, done) => {
+    done(null, user.id);
+});
+
+passport.deserializeUser((id, done) => {
+    User.findById(id, (err, user) => {
+        done(err, user);
+    });
+});
+
+// Routes
+app.post('/register', (req, res) => {
+    const { username, password } = req.body;
+    bcrypt.hash(password, 10, (err, hash) => {
+        if (err) throw err;
+        const newUser = new User({ username, password: hash });
+        newUser.save((err) => {
+            if (err) return res.redirect('/register');
+            res.redirect('/login');
+        });
+    });
+});
+
+app.post('/login', passport.authenticate('local', {
+    successRedirect: '/',
+    failureRedirect: '/login'
+}));
+
+app.get('/logout', (req, res) => {
+    req.logout();
+    res.redirect('/login');
+});
+
+app.get('/register', (req, res) => {
+    res.sendFile(__dirname + '/public/register.html');
+});
+
+app.get('/login', (req, res) => {
+    res.sendFile(__dirname + '/public/login.html');
+});
+
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    if (req.isAuthenticated()) {
+        res.sendFile(__dirname + '/public/index.html');
+    } else {
+        res.redirect('/login');
+    }
 });
 
-// Register endpoint
-app.post('/register', async (req, res) => {
-    console.log('Request Body:', req.body); // Log the request body
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
-    }
-    const { user, error } = await supabase.auth.signUp({ email, password });
-
-    if (error) {
-        return res.status(400).json({ error: error.message });
-    }
-
-    res.status(200).json({ message: 'User registered successfully', user });
+// Socket.io connection
+io.on('connection', (socket) => {
+    console.log('a user connected');
+    socket.on('chat message', (msg) => {
+        io.emit('chat message', msg);
+    });
+    socket.on('disconnect', () => {
+        console.log('user disconnected');
+    });
 });
 
-// Login endpoint
-app.post('/login', async (req, res) => {
-    console.log('Request Body:', req.body); // Log the request body
-    const { email, password } = req.body;
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
-    }
-    const { session, error } = await supabase.auth.signIn({ email, password });
-
-    if (error) {
-        return res.status(400).json({ error: error.message });
-    }
-
-    res.status(200).json({ message: 'User logged in successfully', session });
-});
-
-// Chat endpoint (for simplicity, we'll just echo messages)
-app.post('/chat', async (req, res) => {
-    console.log('Request Body:', req.body); // Log the request body
-    const { message } = req.body;
-    if (!message) {
-        return res.status(400).json({ error: 'Message is required' });
-    }
-    res.status(200).json({ message: `You said: ${message}` });
-});
-
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
