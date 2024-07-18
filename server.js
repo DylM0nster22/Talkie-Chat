@@ -79,6 +79,7 @@ app.post('/register', async (req, res) => {
         await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
         res.redirect('/login');
     } catch (err) {
+        console.error('Error registering new user:', err); // Log the error details
         res.status(500).send('Error registering new user.');
     }
 });
