@@ -1,129 +1,48 @@
-require('dotenv').config();
 const express = require('express');
-const http = require('http');
-const socketIo = require('socket.io');
-const path = require('path');
-const session = require('express-session');
-const passport = require('passport');
-const LocalStrategy = require('passport-local').Strategy;
-const bcrypt = require('bcryptjs');
-const { Pool } = require('pg');
+const bodyParser = require('body-parser');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
+const port = process.env.PORT || 3000;
 
-const PORT = process.env.PORT || 3000;
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: {
-        rejectUnauthorized: false
-    }
-});
+// Supabase setup
+const supabaseUrl = 'https://your-supabase-url.supabase.co';
+const supabaseKey = 'your-supabase-key';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Middleware
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
-app.use(session({ 
-    secret: 'secret', 
-    resave: false, 
-    saveUninitialized: false,
-    cookie: { secure: false } // Set to true if using HTTPS
-}));
-app.use(passport.initialize());
-app.use(passport.session());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// Passport configuration
-passport.use(new LocalStrategy(
-    async (username, password, done) => {
-        try {
-            const res = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-            if (res.rows.length === 0) {
-                return done(null, false, { message: 'Incorrect username.' });
-            }
-            const user = res.rows[0];
-            const isMatch = await bcrypt.compare(password, user.password);
-            if (!isMatch) {
-                return done(null, false, { message: 'Incorrect password.' });
-            }
-            return done(null, user);
-        } catch (err) {
-            return done(err);
-        }
-    }
-));
-
-passport.serializeUser((user, done) => {
-    done(null, user.id);
-});
-
-passport.deserializeUser(async (id, done) => {
-    try {
-        const res = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-        done(null, res.rows[0]);
-    } catch (err) {
-        done(err);
-    }
-});
-
-// Routes to serve HTML files
-app.get('/register', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'register.html'));
-});
-
-app.get('/login', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'login.html'));
-});
-
-// Routes for registration and login
+// Register endpoint
 app.post('/register', async (req, res) => {
-    const { username, password } = req.body;
-    const hashedPassword = await bcrypt.hash(password, 10);
-    try {
-        await pool.query('INSERT INTO users (username, password) VALUES ($1, $2)', [username, hashedPassword]);
-        res.redirect('/login');
-    } catch (err) {
-        console.error('Error registering new user:', err); // Log the error details
-        res.status(500).send('Error registering new user.');
+    const { email, password } = req.body;
+    const { user, error } = await supabase.auth.signUp({ email, password });
+
+    if (error) {
+        return res.status(400).json({ error: error.message });
     }
+
+    res.status(200).json({ message: 'User registered successfully', user });
 });
 
-app.post('/login', (req, res, next) => {
-    passport.authenticate('local', (err, user, info) => {
-        if (err) {
-            console.error('Error during login:', err); // Log the error details
-            return next(err);
-        }
-        if (!user) {
-            console.error('Login failed:', info.message); // Log the failure message
-            return res.redirect('/login');
-        }
-        req.logIn(user, (err) => {
-            if (err) {
-                console.error('Error logging in user:', err); // Log the error details
-                return next(err);
-            }
-            return res.redirect('/');
-        });
-    })(req, res, next);
+// Login endpoint
+app.post('/login', async (req, res) => {
+    const { email, password } = req.body;
+    const { session, error } = await supabase.auth.signIn({ email, password });
+
+    if (error) {
+        return res.status(400).json({ error: error.message });
+    }
+
+    res.status(200).json({ message: 'User logged in successfully', session });
 });
 
-app.get('/logout', (req, res) => {
-    req.logout();
-    res.redirect('/');
+// Chat endpoint (for simplicity, we'll just echo messages)
+app.post('/chat', async (req, res) => {
+    const { message } = req.body;
+    res.status(200).json({ message: `You said: ${message}` });
 });
 
-io.on('connection', (socket) => {
-    console.log('New user connected');
-    socket.on('chat message', (msg) => {
-        io.emit('chat message', msg);
-    });
-    socket.on('disconnect', () => {
-        console.log('User disconnected');
-    });
-});
-
-server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
 });
