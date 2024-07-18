@@ -38,7 +38,7 @@
                 body: JSON.stringify({ email, password })
             });
             const data = await response.json();
-            alert(data.message);
+            alert(data.message || data.error);
         });
 
         document.getElementById('loginForm').addEventListener('submit', async (e) => {
@@ -51,7 +51,7 @@
                 body: JSON.stringify({ email, password })
             });
             const data = await response.json();
-            alert(data.message);
+            alert(data.message || data.error);
         });
 
         document.getElementById('chatForm').addEventListener('submit', async (e) => {
@@ -63,7 +63,7 @@
                 body: JSON.stringify({ message })
             });
             const data = await response.json();
-            alert(data.message);
+            alert(data.message || data.error);
         });
     </script>
 </body>

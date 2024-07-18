@@ -21,7 +21,11 @@ app.get('/', (req, res) => {
 
 // Register endpoint
 app.post('/register', async (req, res) => {
+    console.log('Request Body:', req.body); // Log the request body
     const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+    }
     const { user, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
@@ -33,7 +37,11 @@ app.post('/register', async (req, res) => {
 
 // Login endpoint
 app.post('/login', async (req, res) => {
+    console.log('Request Body:', req.body); // Log the request body
     const { email, password } = req.body;
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+    }
     const { session, error } = await supabase.auth.signIn({ email, password });
 
     if (error) {
@@ -45,7 +53,11 @@ app.post('/login', async (req, res) => {
 
 // Chat endpoint (for simplicity, we'll just echo messages)
 app.post('/chat', async (req, res) => {
+    console.log('Request Body:', req.body); // Log the request body
     const { message } = req.body;
+    if (!message) {
+        return res.status(400).json({ error: 'Message is required' });
+    }
     res.status(200).json({ message: `You said: ${message}` });
 });
 
