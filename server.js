@@ -25,7 +25,12 @@ const pool = new Pool({
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
-app.use(session({ secret: 'secret', resave: false, saveUninitialized: false }));
+app.use(session({ 
+    secret: 'secret', 
+    resave: false, 
+    saveUninitialized: false,
+    cookie: { secure: false } // Set to true if using HTTPS
+}));
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -84,11 +89,25 @@ app.post('/register', async (req, res) => {
     }
 });
 
-app.post('/login', passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/login',
-    failureFlash: true
-}));
+app.post('/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) {
+            console.error('Error during login:', err); // Log the error details
+            return next(err);
+        }
+        if (!user) {
+            console.error('Login failed:', info.message); // Log the failure message
+            return res.redirect('/login');
+        }
+        req.logIn(user, (err) => {
+            if (err) {
+                console.error('Error logging in user:', err); // Log the error details
+                return next(err);
+            }
+            return res.redirect('/');
+        });
+    })(req, res, next);
+});
 
 app.get('/logout', (req, res) => {
     req.logout();
