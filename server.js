@@ -13,7 +13,7 @@ const server = http.createServer(app);
 const io = socketIo(server);
 
 // Connect to MongoDB
-const mongoUri = 'mongodb+srv://tetherpro:L@serda1sy@cluster0.ijo3sgw.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0';
+const mongoUri = 'mongodb://atlas-sql-6699894968bc6a30c625b0f7-d4wxp.a.query.mongodb.net/sample_mflix?ssl=true&authSource=admin';
 mongoose.connect(mongoUri, {});
 
 // User schema and model
