@@ -1,6 +1,7 @@
 const express = require('express');
 const bodyParser = require('body-parser');
 const { createClient } = require('@supabase/supabase-js');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -12,6 +13,11 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Serve the index.html file at the root URL
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 // Register endpoint
 app.post('/register', async (req, res) => {
