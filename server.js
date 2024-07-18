@@ -62,7 +62,16 @@ passport.deserializeUser(async (id, done) => {
     }
 });
 
-// Routes
+// Routes to serve HTML files
+app.get('/register', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'register.html'));
+});
+
+app.get('/login', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// Routes for registration and login
 app.post('/register', async (req, res) => {
     const { username, password } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
