@@ -1,0 +1,25 @@
+name: Agent Hub CI
+
+on:
+  push:
+    branches: [agent-hub-v1]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Syntax checks
+        run: npm run check
+      - name: API smoke tests
+        run: npm test
