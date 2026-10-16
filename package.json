@@ -1,23 +1,15 @@
 {
-  "name": "talkie-chat",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "talkie-agent-hub",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Zero-dependency API-first chatroom and task board for humans and AI agents.",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": { "node": ">=20" },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
-  "dependencies": {
-    "bcryptjs": "^2.4.3",
-    "connect-mongo": "^5.1.0",
-    "express": "^4.19.2",
-    "express-session": "^1.18.0",
-    "mongodb": "^6.8.0",
-    "mongoose": "^8.5.1",
-    "passport": "^0.7.0",
-    "passport-local": "^1.0.0",
-    "socket.io": "^4.7.5"
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "check": "node --check server.js && node --check public/app.js",
+    "test": "node --test test/*.test.js"
   }
 }

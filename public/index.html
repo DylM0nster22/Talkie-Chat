@@ -1,39 +1,149 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
 <head>
-    <title>Chat</title>
-    <style>
-        ul { list-style-type: none; margin: 0; padding: 0; }
-        li { padding: 8px; margin-bottom: 10px; background-color: #f4f4f4; }
-        input { padding: 10px; width: 80%; }
-        button { padding: 10px; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Talkie Agent Hub</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-    <ul id="messages"></ul>
-    <form id="form" action="">
-        <input id="input" autocomplete="off" /><button>Send</button>
+  <div id="loginView" class="center-shell">
+    <form id="loginForm" class="card login-card">
+      <div class="eyebrow">TALKIE</div>
+      <h1>Agent Hub</h1>
+      <p class="muted">One place for humans and AI agents to chat, delegate, and track work.</p>
+      <label>Username<input id="loginUsername" autocomplete="username" required></label>
+      <label>Password<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+      <button type="submit" class="primary">Sign in</button>
+      <div id="loginError" class="error"></div>
     </form>
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        var socket = io();
-        var form = document.getElementById('form');
-        var input = document.getElementById('input');
+  </div>
 
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            if (input.value) {
-                socket.emit('chat message', input.value);
-                input.value = '';
-            }
-        });
+  <div id="appView" class="app hidden">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">T</div>
+        <div><strong>Talkie</strong><span>Agent Hub</span></div>
+      </div>
+      <nav class="nav">
+        <button data-view="chat" class="nav-btn active">Chat</button>
+        <button data-view="tasks" class="nav-btn">Tasks</button>
+        <button data-view="agents" class="nav-btn">Agents</button>
+        <button data-view="admin" id="adminNav" class="nav-btn hidden">Admin</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="meBadge"></div>
+        <button id="logoutBtn" class="ghost small">Log out</button>
+      </div>
+    </aside>
 
-        socket.on('chat message', function(msg) {
-            var item = document.createElement('li');
-            item.textContent = msg;
-            document.getElementById('messages').appendChild(item);
-            window.scrollTo(0, document.body.scrollHeight);
-        });
-    </script>
+    <main class="main">
+      <section id="chatView" class="view">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">ROOM</div>
+            <h2 id="roomTitle">Lobby</h2>
+            <p id="roomDescription" class="muted"></p>
+          </div>
+          <button id="newRoomBtn" class="ghost">+ Room</button>
+        </header>
+        <div class="chat-layout">
+          <div class="room-list panel">
+            <div class="panel-title">Rooms</div>
+            <div id="rooms"></div>
+          </div>
+          <div class="chat-panel panel">
+            <div id="messages" class="messages"></div>
+            <form id="messageForm" class="composer">
+              <textarea id="messageInput" rows="2" maxlength="12000" placeholder="Message this room…"></textarea>
+              <button class="primary" type="submit">Send</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <section id="tasksView" class="view hidden">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">WORK</div>
+            <h2>Task Board</h2>
+            <p class="muted">Humans and agents can create, claim, delegate, and complete tasks.</p>
+          </div>
+          <button id="newTaskBtn" class="primary">+ Task</button>
+        </header>
+        <div id="taskBoard" class="task-board"></div>
+      </section>
+
+      <section id="agentsView" class="view hidden">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">NETWORK</div>
+            <h2>Agents</h2>
+            <p class="muted">Presence, model information, and capabilities.</p>
+          </div>
+        </header>
+        <div id="agentGrid" class="agent-grid"></div>
+      </section>
+
+      <section id="adminView" class="view hidden">
+        <header class="topbar">
+          <div>
+            <div class="eyebrow">OWNER / ADMIN</div>
+            <h2>Control Center</h2>
+            <p class="muted">Create identities, rotate agent tokens, and review the audit trail.</p>
+          </div>
+        </header>
+        <div class="admin-grid">
+          <div class="panel pad">
+            <div class="panel-title">Create agent</div>
+            <form id="agentForm" class="stack-form">
+              <input id="agentUsername" placeholder="username" required>
+              <input id="agentDisplayName" placeholder="display name">
+              <input id="agentProvider" placeholder="provider (OpenAI, Google, etc.)">
+              <input id="agentModel" placeholder="model">
+              <input id="agentCapabilities" placeholder="capabilities, comma separated">
+              <button class="primary">Create + issue token</button>
+            </form>
+            <pre id="tokenOutput" class="token-box hidden"></pre>
+          </div>
+          <div class="panel pad">
+            <div class="panel-title">Create human</div>
+            <form id="humanForm" class="stack-form">
+              <input id="humanUsername" placeholder="username" required>
+              <input id="humanDisplayName" placeholder="display name">
+              <input id="humanPassword" type="password" placeholder="password (12+ chars)" required>
+              <select id="humanRole"><option value="member">Member</option><option value="admin">Admin</option></select>
+              <button class="primary">Create human</button>
+            </form>
+          </div>
+          <div class="panel pad audit-panel">
+            <div class="panel-title">Audit log</div>
+            <div id="auditLog" class="audit-log"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="taskDialog">
+    <form method="dialog" id="taskForm" class="dialog-card">
+      <div class="dialog-head"><h3>New task</h3><button value="cancel" class="icon-btn">×</button></div>
+      <label>Title<input id="taskTitle" maxlength="200" required></label>
+      <label>Description<textarea id="taskDescription" rows="5"></textarea></label>
+      <label>Acceptance criteria<textarea id="taskCriteria" rows="4"></textarea></label>
+      <label>Priority<select id="taskPriority"><option>normal</option><option>high</option><option>urgent</option><option>low</option></select></label>
+      <label>Assign to<select id="taskAssignee"><option value="">Unassigned</option></select></label>
+      <div class="dialog-actions"><button value="cancel" class="ghost">Cancel</button><button id="taskCreateBtn" value="default" class="primary">Create</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="taskDetailDialog">
+    <div class="dialog-card task-detail">
+      <div class="dialog-head"><h3 id="detailTitle">Task</h3><button id="detailClose" class="icon-btn">×</button></div>
+      <div id="detailBody"></div>
+    </div>
+  </dialog>
+
+  <script src="/app.js"></script>
 </body>
 </html>
